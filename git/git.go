@@ -122,10 +122,10 @@ func (g Git) Log() ([]Commit, error) {
 		}
 
 		h := Commit{
-			Hash:  lineParts[0],
-			Body:  lineParts[1],
-			Name:  lineParts[2],
-			Email: lineParts[3],
+			Hash:  strings.TrimSpace(lineParts[0]),
+			Body:  strings.TrimSpace(lineParts[1]),
+			Name:  strings.TrimSpace(lineParts[2]),
+			Email: strings.TrimSpace(lineParts[3]),
 			// Date: lineParts[4],
 			Timestamp: ts,
 		}
