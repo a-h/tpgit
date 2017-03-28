@@ -12,7 +12,7 @@ import (
 	"github.com/a-h/tpgit/git"
 )
 
-var repo = flag.String("repo", "https://github.com/a-h/ver", "The repo to query for TargetProcess Ids")
+var repo = flag.String("repo", "https://github.com/a-h/ver", "The repo to query for TargetProcess ids in commit messages.")
 var dryRun = flag.Bool("dryRun", true, "Set to true (default) to see what changes would be made.")
 
 func main() {
@@ -32,6 +32,7 @@ func main() {
 
 	for _, entry := range log {
 		fmt.Printf("%d - %s\n", extract(entry.Body), entry.Body)
+		fmt.Println("----------------------------------------------")
 	}
 }
 
@@ -47,9 +48,19 @@ func extract(message string) []int {
 			if err != nil {
 				continue
 			}
-			ids = append(ids, id)
+			if !contains(ids, id) {
+				ids = append(ids, id)
+			}
 		}
 	}
-
 	return ids
+}
+
+func contains(values []int, value int) bool {
+	for _, v := range values {
+		if v == value {
+			return true
+		}
+	}
+	return false
 }

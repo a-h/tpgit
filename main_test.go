@@ -43,6 +43,14 @@ func TestExtractFunction(t *testing.T) {
 			expected: []int{404},
 		},
 		{
+			input:    "TP-1893, TP-1893 no duplicates",
+			expected: []int{1893},
+		},
+		{
+			input:    "Title line\n\nTP-123",
+			expected: []int{123},
+		},
+		{
 			// Overflow
 			input:    "TP-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 			expected: []int{},
