@@ -81,13 +81,17 @@ func (g Git) CleanUp() {
 	os.RemoveAll(g.BaseLocation)
 }
 
+var lineSeparator = ":7e7dd4cbeda4c5f65b46e9d55ac526f63fa9a7c9:\n"
+var separator = ":ec0c7bc17e1ef95b57f47e6ee9f63f54ac187325:"
+
 // Log gets the git log of the repository.
 func (g Git) Log() ([]Commit, error) {
+	dir, err := os.Getwd()
 	os.Chdir(g.PackageDirectory())
+	if err != nil {
+		defer os.Chdir(dir)
+	}
 
-	history := []Commit{}
-	lineSeparator := ":7e7dd4cbeda4c5f65b46e9d55ac526f63fa9a7c9:\n"
-	separator := ":ec0c7bc17e1ef95b57f47e6ee9f63f54ac187325:"
 	logfmt := "--pretty=format:" +
 		"%H" + separator + // Hash
 		"%B" + separator + // Subject
@@ -101,38 +105,47 @@ func (g Git) Log() ([]Commit, error) {
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
-		return history, fmt.Errorf("failed to get the log of %s with err '%v' and message '%s'", g.BaseLocation, err, string(out))
+		return []Commit{}, fmt.Errorf("failed to get the log of %s with err '%v' and message '%s'", g.BaseLocation, err, string(out))
 	}
 
-	for _, line := range strings.Split(string(out), lineSeparator) {
+	return parseLogOutput(string(out))
+}
+
+func parseLogOutput(output string) ([]Commit, error) {
+	commits := []Commit{}
+	for _, line := range strings.Split(output, lineSeparator) {
 		if line == "" {
 			break
 		}
-
-		lineParts := strings.Split(line, separator)
-
-		if len(lineParts) != 6 {
-			return history, fmt.Errorf("failed to parse log line '%s', unexpected number of commit parts found", line)
-		}
-
-		ts, err := strconv.ParseInt(lineParts[5], 10, 64)
-
+		c, err := parseLogLine(line)
 		if err != nil {
-			return history, fmt.Errorf("failed to parse timestamp value of '%s' for line '%s' with err %v", lineParts[5], line, err)
+			return commits, err
 		}
+		commits = append(commits, c)
+	}
+	return commits, nil
+}
 
-		h := Commit{
-			Hash:  strings.TrimSpace(lineParts[0]),
-			Body:  strings.TrimSpace(lineParts[1]),
-			Name:  strings.TrimSpace(lineParts[2]),
-			Email: strings.TrimSpace(lineParts[3]),
-			// Date: lineParts[4],
-			Timestamp: ts,
-		}
-		history = append(history, h)
+func parseLogLine(line string) (Commit, error) {
+	lineParts := strings.Split(line, separator)
+
+	if len(lineParts) != 6 {
+		return Commit{}, fmt.Errorf("failed to parse log line '%s', unexpected number of commit parts found", line)
 	}
 
-	return history, nil
+	ts, err := strconv.ParseInt(lineParts[5], 10, 64)
+
+	if err != nil {
+		return Commit{}, fmt.Errorf("failed to parse timestamp value of '%s' for line '%s' with err %v", lineParts[5], line, err)
+	}
+
+	return Commit{
+		Hash:      strings.TrimSpace(lineParts[0]),
+		Body:      strings.TrimSpace(lineParts[1]),
+		Name:      strings.TrimSpace(lineParts[2]),
+		Email:     strings.TrimSpace(lineParts[3]),
+		Timestamp: ts,
+	}, nil
 }
 
 // Get extracts all of the files from the given commit into a directory.

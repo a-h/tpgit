@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"regexp"
 
 	"strconv"
@@ -47,7 +48,11 @@ func run() int {
 		return -1
 	}
 
-	fn := getFileNameFromRepo(*repo)
+	dir, err := os.Getwd()
+	if err != nil {
+		logger.Errorf("couldn't get working directory: %v", err)
+	}
+	fn := path.Join(dir, getFileNameFromRepo(*repo))
 	logger.Debug("hash filename is %v", fn)
 
 	lockfileName := fn + ".lock"
@@ -55,7 +60,7 @@ func run() int {
 		logger.Errorf("lock file %v is present for repo %v. not starting.\n", lockfileName, *repo)
 		return -1
 	}
-	err := ioutil.WriteFile(lockfileName, []byte("lock"), 0666)
+	err = ioutil.WriteFile(lockfileName, []byte("lock"), 0666)
 	if err != nil {
 		logger.Errorf("error creating lock file %v: %v", lockfileName, err)
 		return -1
@@ -123,6 +128,8 @@ func run() int {
 		return -1
 	}
 
+	logger.Infof("complete")
+
 	return 0
 }
 
@@ -142,7 +149,7 @@ func getCommitURL(repo string, hash string) string {
 }
 
 func getFileNameFromRepo(repo string) string {
-	return strings.NewReplacer("/", "-", ":", "-", ".", "-").Replace(repo)
+	return strings.NewReplacer("/", "", ":", "", ".", "-").Replace(repo)
 }
 
 func writeHashes(fileName string, hashes map[string]bool) error {
@@ -175,9 +182,12 @@ func loadHashes(fileName string) (map[string]bool, error) {
 	var line string
 	for {
 		line, err = r.ReadString('\n')
-		op[strings.TrimSpace(line)] = true
 		if err != nil {
 			break
+		}
+		line = strings.TrimSpace(line)
+		if line != "" {
+			op[line] = true
 		}
 	}
 
