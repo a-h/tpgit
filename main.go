@@ -26,6 +26,7 @@ var dryRun = flag.Bool("dryRun", true, "Set to true (default) to see what change
 var url = flag.String("url", "", "Set to the root address of your TargetProcess account, e.g. https://example.tpondemand.com")
 var username = flag.String("username", "", "Sets the username to use to authenticate against TargetProcess.")
 var password = flag.String("password", "", "Sets the password to use to authenticate against TargetProcess.")
+var maximumToAdd = flag.Int("max", 1, "Sets the maximum number of commits that the system will do in one run.")
 
 func main() {
 	exitCode := run()
@@ -73,21 +74,14 @@ func run() int {
 		return -1
 	}
 
-	logger.Info("cloning repo")
-	r, err := git.Clone(*repo)
-	defer r.CleanUp()
-	if err != nil {
-		logger.Errorf("failed to clone the repo: %v\n", err)
-		return -1
-	}
-
 	logger.Info("getting commit log from repo")
-	commitlog, err := r.Log()
+	commitlog, err := git.Log(*repo)
 	if err != nil {
 		logger.Errorf("failed to get the commit log: %v\n", err)
 		return -1
 	}
 
+	commentsCreated := 0
 	for _, entry := range commitlog {
 		entryLogger := logger.WithField("hash", entry.Hash)
 
@@ -111,10 +105,17 @@ func run() int {
 		entryLogger.Info("adding comment to target process")
 
 		tp := targetprocess.NewAPI(*url, *username, *password)
+
 		if !*dryRun {
 			err = addCommentToTargetProcess(tp, ids, msg)
+			commentsCreated++
 			if err != nil {
 				entryLogger.Errorf("failed to write comment: %v", err)
+			}
+			entryLogger.Infof("written %d comments to TargetProces")
+			if commentsCreated > *maximumToAdd {
+				entryLogger.Infof("exceeded maximum of %d comments, not doing any more")
+				continue
 			}
 		}
 
@@ -122,7 +123,7 @@ func run() int {
 	}
 
 	logger.Infof("writing %d hashes to %v", len(hashes), fn)
-	err = writeHashes(fn, hashes)
+	err = saveHashes(fn, hashes)
 	if err != nil {
 		logger.Errorf("failed to write hashes to file: %v", err)
 		return -1
@@ -152,7 +153,7 @@ func getFileNameFromRepo(repo string) string {
 	return strings.NewReplacer("/", "", ":", "", ".", "-").Replace(repo)
 }
 
-func writeHashes(fileName string, hashes map[string]bool) error {
+func saveHashes(fileName string, hashes map[string]bool) error {
 	file, err := os.Create(fileName)
 	defer file.Close()
 	if err != nil {
