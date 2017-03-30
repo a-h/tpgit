@@ -1,4 +1,5 @@
 execute.sh
+test.sh
 http*
 ssh*
 *.hashes

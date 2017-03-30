@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 // API is a TargetProcess API endpoint.
@@ -19,7 +20,7 @@ type API struct {
 // NewAPI creates a new TargetProcess endpoint.
 func NewAPI(url string, username string, password string) API {
 	return API{
-		URL:      url,
+		URL:      strings.TrimSuffix(url, "/"),
 		Username: username,
 		Password: password,
 	}

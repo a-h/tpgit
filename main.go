@@ -135,16 +135,16 @@ func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commen
 		entryLogger.Info("adding comment to target process")
 
 		if !*dryRun && len(ids) > 0 {
-			err = addComments(commenter, ids, msg)
-			commentsCreated++
-			if err != nil {
-				entryLogger.Errorf("failed to write comment: %v", err)
-			}
-			entryLogger.Infof("written %d comments to TargetProces", commentsCreated)
 			if commentsCreated > *maximumToAdd {
 				entryLogger.Infof("exceeded maximum of %d comments, not doing any more", *maximumToAdd)
 				continue
 			}
+			err = addComments(commenter, ids, msg)
+			commentsCreated += len(ids)
+			if err != nil {
+				entryLogger.Errorf("failed to write comment: %v", err)
+			}
+			entryLogger.Infof("written %d comments to TargetProces", commentsCreated)
 		}
 
 		if err = be.MarkProcessed(entry.Hash); err != nil {
