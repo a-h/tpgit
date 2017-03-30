@@ -51,6 +51,10 @@ func TestExtractFunction(t *testing.T) {
 			expected: []int{123},
 		},
 		{
+			input:    "Testing version var in build step 2.",
+			expected: []int{},
+		},
+		{
 			// Overflow
 			input:    "TP-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 			expected: []int{},

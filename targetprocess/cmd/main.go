@@ -36,7 +36,7 @@ func main() {
 	api := targetprocess.NewAPI(*url, *username, *password)
 	msg := fmt.Sprintf("test message %v", time.Now())
 	fmt.Printf("Adding comment to entity %d: %s\n", *entity, msg)
-	_, err := api.Comment(*entity, msg)
+	err := api.Comment(*entity, msg)
 
 	if err != nil {
 		fmt.Printf("err: %v", err)

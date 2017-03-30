@@ -103,7 +103,7 @@ func getBackend() (Backend, error) {
 }
 
 type commenter interface {
-	Comment(entityID int, message string) (id int, err error)
+	Comment(entityID int, message string) error
 }
 
 func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commenter commenter, commitURL string) error {
@@ -132,13 +132,12 @@ func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commen
 			entry.Email,
 			entry.Body)
 
-		entryLogger.Info("adding comment to target process")
-
 		if !*dryRun && len(ids) > 0 {
 			if commentsCreated > *maximumToAdd {
 				entryLogger.Infof("exceeded maximum of %d comments, not doing any more", *maximumToAdd)
 				continue
 			}
+			entryLogger.Info("adding comment to target process")
 			err = addComments(commenter, ids, msg)
 			commentsCreated += len(ids)
 			if err != nil {
@@ -164,7 +163,7 @@ func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commen
 
 func addComments(commenter commenter, ids []int, msg string) error {
 	for _, id := range ids {
-		_, err := commenter.Comment(id, msg)
+		err := commenter.Comment(id, msg)
 		if err != nil {
 			return err
 		}
@@ -172,7 +171,7 @@ func addComments(commenter commenter, ids []int, msg string) error {
 	return nil
 }
 
-var re = regexp.MustCompile(`(?i)(?:(?:TP)?(?:\-|\s+|\:|^#))(?P<id>\d+)`)
+var re = regexp.MustCompile(`(?i)(?:(?:TP)|(?:TP[\-\s\:]+)|(?:^#))(?P<id>\d+)`)
 
 func extract(message string) []int {
 	ids := []int{}

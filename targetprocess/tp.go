@@ -39,7 +39,7 @@ type General struct {
 }
 
 // Comment comments on a TargetProcess entity.
-func (api API) Comment(entityID int, message string) (id int, err error) {
+func (api API) Comment(entityID int, message string) (err error) {
 	comment := Comment{
 		Description: message,
 		General: General{
@@ -49,11 +49,11 @@ func (api API) Comment(entityID int, message string) (id int, err error) {
 	b := new(bytes.Buffer)
 	err = json.NewEncoder(b).Encode(comment)
 	if err != nil {
-		return 0, fmt.Errorf("failed to encode comment with error: %v", err)
+		return fmt.Errorf("failed to encode comment with error: %v", err)
 	}
 	r, err := http.NewRequest("POST", api.URL+"/api/v1/comments", b)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	r.Header.Add("Content-Type", "application/json")
 	r.SetBasicAuth(api.Username, api.Password)
@@ -61,16 +61,14 @@ func (api API) Comment(entityID int, message string) (id int, err error) {
 	client := &http.Client{}
 	resp, err := client.Do(r)
 
-	fmt.Println(resp)
 	body, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	if err != nil {
-		return 0, fmt.Errorf("failed to read response of TargetProcess API with error: %v", err)
+		return fmt.Errorf("failed to read response of TargetProcess API with error: %v", err)
 	}
-	fmt.Println(string(body))
 
 	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("TargetProcess API returned status %v, expected OK.", resp.Status)
+		return fmt.Errorf("TargetProcess API returned status %v, expected OK. Body was: %v", resp.Status, string(body))
 	}
-	return 0, nil
+	return nil
 }
