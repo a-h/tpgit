@@ -124,7 +124,10 @@ func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commen
 		ids := extract(entry.Body)
 		entryLogger = entryLogger.WithField("ids", ids)
 		entryLogger = entryLogger.WithField("body", entry.Body)
-		entryLogger.Info("processing commit")
+
+		if !*quiet {
+			entryLogger.Info("processing commit")
+		}
 
 		msg := fmt.Sprintf("Referenced in commit %v (%v) by %v:\n\n%s",
 			commitURL+entry.Hash,
@@ -134,7 +137,9 @@ func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commen
 
 		if !*dryRun && len(ids) > 0 {
 			if commentsCreated > *maximumToAdd {
-				entryLogger.Infof("exceeded maximum of %d comments, not doing any more", *maximumToAdd)
+				if !*quiet {
+					entryLogger.Infof("exceeded maximum of %d comments, not doing any more", *maximumToAdd)
+				}
 				continue
 			}
 			entryLogger.Info("adding comment to target process")

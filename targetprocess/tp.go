@@ -67,7 +67,7 @@ func (api API) Comment(entityID int, message string) (err error) {
 		return fmt.Errorf("failed to read response of TargetProcess API with error: %v", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("TargetProcess API returned status %v, expected OK. Body was: %v", resp.Status, string(body))
 	}
 	return nil
