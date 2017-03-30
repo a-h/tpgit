@@ -18,11 +18,13 @@ import (
 
 var repoFlag = flag.String("repo", "", "The directory containing a git repo to query for TargetProcess ids in commit messages.")
 var repoURLFlag = flag.String("repoURL", "", "The endpoint of the repo, used to construct the URL to the commits in TargetProcess e.g. https://bitbucket.com/org/repo/commits/ - the message will add the git hash to end of URL.")
-var dryRun = flag.Bool("dryRun", true, "Set to true (default) to see what changes would be made.")
+var dryRun = flag.Bool("dryrun", true, "Set to true (default) to see what changes would be made.")
 var url = flag.String("url", "", "Set to the root address of your TargetProcess account, e.g. https://example.tpondemand.com")
 var username = flag.String("username", "", "Sets the username to use to authenticate against TargetProcess.")
 var password = flag.String("password", "", "Sets the password to use to authenticate against TargetProcess.")
 var maximumToAdd = flag.Int("max", 1, "Sets the maximum number of commits that the system will do in one run.")
+var logFormat = flag.String("logformat", "json", "Set to json for JSON, or console for console friendly formatting.")
+var quiet = flag.Bool("quiet", false, "Reduces log output.")
 
 var backendFlag = flag.String("backend", "localfile", "Sets the backend to use to store the status of git entries.")
 
@@ -37,7 +39,9 @@ func main() {
 func run() int {
 	flag.Parse()
 
-	log.SetFormatter(&log.JSONFormatter{})
+	if *logFormat == "json" {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
 	logger := log.WithField("repo", *repoFlag)
 
 	repo := *repoFlag
@@ -111,7 +115,7 @@ func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commen
 		if err != nil {
 			return err
 		}
-		if processed {
+		if processed && !*quiet {
 			entryLogger.Info("skipping already processed hash")
 			continue
 		}
@@ -130,15 +134,15 @@ func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commen
 
 		entryLogger.Info("adding comment to target process")
 
-		if !*dryRun {
+		if !*dryRun && len(ids) > 0 {
 			err = addComments(commenter, ids, msg)
 			commentsCreated++
 			if err != nil {
 				entryLogger.Errorf("failed to write comment: %v", err)
 			}
-			entryLogger.Infof("written %d comments to TargetProces")
+			entryLogger.Infof("written %d comments to TargetProces", commentsCreated)
 			if commentsCreated > *maximumToAdd {
-				entryLogger.Infof("exceeded maximum of %d comments, not doing any more")
+				entryLogger.Infof("exceeded maximum of %d comments, not doing any more", *maximumToAdd)
 				continue
 			}
 		}
