@@ -33,7 +33,7 @@ func main() {
 		return
 	}
 
-	api := targetprocess.NewAPI(*url, *username, *password)
+	api := targetprocess.NewAPI(*url, targetprocess.PasswordAuth(*username, *password))
 	msg := fmt.Sprintf("test message %v", time.Now())
 	fmt.Printf("Adding comment to entity %d: %s\n", *entity, msg)
 	err := api.Comment(*entity, msg)

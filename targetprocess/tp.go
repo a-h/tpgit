@@ -12,17 +12,19 @@ import (
 // API is a TargetProcess API endpoint.
 type API struct {
 	// URL of the API endpoint of TargetProcess.
-	URL      string
-	Username string
-	Password string
+	URL           string
+	Authenticator func(*http.Request)
 }
 
+// Authenticator represents a way of authenticating against TargetProcess,
+// e.g. PasswordAuth or TokenAuth.
+type Authenticator func(*http.Request)
+
 // NewAPI creates a new TargetProcess endpoint.
-func NewAPI(url string, username string, password string) API {
+func NewAPI(url string, auth Authenticator) API {
 	return API{
-		URL:      strings.TrimSuffix(url, "/"),
-		Username: username,
-		Password: password,
+		URL:           strings.TrimSuffix(url, "/"),
+		Authenticator: auth,
 	}
 }
 
@@ -55,8 +57,8 @@ func (api API) Comment(entityID int, message string) (err error) {
 	if err != nil {
 		return err
 	}
+	api.Authenticator(r)
 	r.Header.Add("Content-Type", "application/json")
-	r.SetBasicAuth(api.Username, api.Password)
 
 	client := &http.Client{}
 	resp, err := client.Do(r)
