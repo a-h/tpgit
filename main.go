@@ -18,16 +18,29 @@ import (
 
 var repoFlag = flag.String("repo", "", "The directory containing a git repo to query for TargetProcess ids in commit messages.")
 var repoURLFlag = flag.String("repourl", "", "The endpoint of the repo, used to construct the URL to the commits in TargetProcess e.g. https://bitbucket.com/org/repo/commits/ - the message will add the git hash to end of URL.")
-var dryRun = flag.Bool("dryrun", true, "Set to true (default) to see what changes would be made.")
 var url = flag.String("url", "", "Set to the root address of your TargetProcess account, e.g. https://example.tpondemand.com")
+
+// Protection to stop the program running out of control by misconfiguration
+var dryRun = flag.Bool("dryrun", true, "Set to true (default) to see what changes would be made.")
+var maximumToAdd = flag.Int("max", 10, "Sets the maximum number of commits that the system will do in one run.")
+
+// Set one of username/password or accesstoken
 var username = flag.String("username", "", "Sets the username to use to authenticate against TargetProcess.")
 var password = flag.String("password", "", "Sets the password to use to authenticate against TargetProcess.")
 var accessToken = flag.String("accesstoken", "", "Sets the TargetProcess access token to use to write comments.")
-var maximumToAdd = flag.Int("max", 1, "Sets the maximum number of commits that the system will do in one run.")
+
+// Some CI tools, e.g. Circle and AppVeyor provide environment variables containing the hash which has triggered
+// the build and run a build for each hash, this is a good way to not require any backend at all.
+// The environment variables are CIRCLE_SHA1, APPVEYOR_REPO_COMMIT
+// TeamCity uses %build.vcs.number%
+var hash = flag.String("hash", "", "When set to a value, the program will only add a comment for the commit which matches that hash.")
+
+// Logging
 var logFormat = flag.String("logformat", "json", "Set to json for JSON, or console for console friendly formatting.")
 var quiet = flag.Bool("quiet", false, "Reduces log output.")
 
-var backendFlag = flag.String("backend", "localfile", "Sets the backend to use to store the status of git entries.")
+// Backend to store the ids of processed hashes, for situations where you want to run the program multiple times manually.
+var backendFlag = flag.String("backend", "localfile", "Sets the backend to use to store the status of git entries, use localfile or none.")
 
 // Local File backened settings.
 var localFileLocationFlag = flag.String("hashfile", "", "The name of the file to use to store the hashes, e.g. 'projectname.hashes'")
@@ -94,7 +107,14 @@ func run() int {
 		return -1
 	}
 
-	err = processCommmits(logger, commits, be, tp, *repoURLFlag)
+	var shouldInclude func(git.Commit) bool
+	if *hash != "" {
+		shouldInclude = func(g git.Commit) bool {
+			return g.Hash == *hash
+		}
+	}
+
+	err = processCommmits(logger, commits, be, tp, *repoURLFlag, shouldInclude)
 	if err != nil {
 		return -1
 	}
@@ -117,11 +137,16 @@ type commenter interface {
 	Comment(entityID int, message string) error
 }
 
-func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commenter commenter, commitURL string) error {
+func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commenter commenter, commitURL string, shouldInclude func(git.Commit) bool) error {
 	commentsCreated := 0
 	for _, entry := range commits {
 		entryLogger := logger.WithField("hash", entry.Hash)
-
+		if !shouldInclude(entry) {
+			if !*quiet {
+				entryLogger.Info("skipping hash - doesn't match filter")
+			}
+			continue
+		}
 		processed, err := be.IsProcessed(entry.Hash)
 		if err != nil {
 			return err
