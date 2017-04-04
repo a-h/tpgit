@@ -77,11 +77,6 @@ func run() int {
 		return -1
 	}
 
-	if *username == "" || *password == "" {
-		logger.Errorf("username or password flag missing")
-		return -1
-	}
-
 	logger.Info("getting commit log from repo")
 	commits, err := git.Log(repo)
 	if err != nil {

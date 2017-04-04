@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"reflect"
 	"testing"
 )
@@ -72,6 +73,15 @@ func TestExtractFunction(t *testing.T) {
 
 func TestBackendInMemory(t *testing.T) {
 	be, err := getBackend("inmemory", "")
+	if err != nil {
+		t.Fatalf("failed to get the backend: %v", err)
+	}
+	testbackend(be, t)
+}
+
+func TestBackendFile(t *testing.T) {
+	be, err := getBackend("localfile", "localfilebackend.test")
+	defer os.Remove("localfilebackend.test")
 	if err != nil {
 		t.Fatalf("failed to get the backend: %v", err)
 	}

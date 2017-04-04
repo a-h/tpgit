@@ -25,7 +25,13 @@ func NewLocalFile(fileName string) (*LocalFile, error) {
 }
 
 func (f *LocalFile) GetLease() (id string, err error) {
-	if _, err := os.Stat(f.FileName); os.IsNotExist(err) {
+	fn := f.FileName + ".lock"
+	if _, err := os.Stat(fn); !os.IsNotExist(err) {
+		return "", err
+	}
+	file, err := os.Create(fn)
+	defer file.Close()
+	if err != nil {
 		return "", err
 	}
 	return "ok", nil
@@ -37,7 +43,11 @@ func (f *LocalFile) ExtendLease(id string) (ok bool, err error) {
 }
 
 func (f *LocalFile) CancelLease() (err error) {
-	return saveHashes(f.FileName, f.hashes)
+	err = saveHashes(f.FileName, f.hashes)
+	if err != nil {
+		return err
+	}
+	return os.Remove(f.FileName + ".lock")
 }
 
 func (f *LocalFile) IsProcessed(hash string) (bool, error) {
