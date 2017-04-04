@@ -40,7 +40,7 @@ var logFormat = flag.String("logformat", "json", "Set to json for JSON, or conso
 var quiet = flag.Bool("quiet", false, "Reduces log output.")
 
 // Backend to store the ids of processed hashes, for situations where you want to run the program multiple times manually.
-var backendFlag = flag.String("backend", "localfile", "Sets the backend to use to store the status of git entries, use localfile or none.")
+var backendFlag = flag.String("backend", "localfile", "Sets the backend to use to store the status of git entries, use localfile or inmemory.")
 
 // Local File backened settings.
 var localFileLocationFlag = flag.String("hashfile", "", "The name of the file to use to store the hashes, e.g. 'projectname.hashes'")
@@ -89,7 +89,7 @@ func run() int {
 		return -1
 	}
 
-	be, err := getBackend()
+	be, err := getBackend(*backendFlag, *localFileLocationFlag)
 	if err != nil {
 		logger.Errorf("failed to configure backend: %v", err)
 		return -1
@@ -121,14 +121,15 @@ func run() int {
 	return 0
 }
 
-func getBackend() (Backend, error) {
-	switch *backendFlag {
+func getBackend(name string, localFileLocation string) (Backend, error) {
+	switch name {
 	case "localfile":
-		filename := *localFileLocationFlag
-		if filename == "" {
+		if localFileLocation == "" {
 			return nil, errors.New("localfile backend: hashfile flag not set")
 		}
-		return backend.NewLocalFile(filename)
+		return backend.NewLocalFile(localFileLocation)
+	case "inmemory":
+		return backend.NewInMemory(), nil
 	}
 	return nil, errors.New("backend not recognised")
 }

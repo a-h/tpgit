@@ -69,3 +69,51 @@ func TestExtractFunction(t *testing.T) {
 		}
 	}
 }
+
+func TestBackendInMemory(t *testing.T) {
+	be, err := getBackend("inmemory", "")
+	if err != nil {
+		t.Fatalf("failed to get the backend: %v", err)
+	}
+	testbackend(be, t)
+}
+
+func TestNoBackend(t *testing.T) {
+	_, err := getBackend("", "")
+	if err == nil {
+		t.Fatal("expected error, but got a backend")
+	}
+}
+
+func testbackend(be Backend, t *testing.T) {
+	id, err := be.GetLease()
+	if err != nil {
+		t.Errorf("error calling GetLease: %v", err)
+	}
+	ok, err := be.ExtendLease(id)
+	if !ok {
+		t.Error("failed to extend lease")
+	}
+	if err != nil {
+		t.Errorf("failed to extend lease: %v", err)
+	}
+	ok, err = be.IsProcessed("abc")
+	if ok {
+		t.Errorf("a hash that hasn't been processed has been marked as processed")
+	}
+	err = be.MarkProcessed("abc")
+	if err != nil {
+		t.Errorf("failed to mark hash as processed: %v", err)
+	}
+	ok, err = be.IsProcessed("abc")
+	if !ok {
+		t.Errorf("failed to confirm the past processing of a hash")
+	}
+	if err != nil {
+		t.Errorf("failed to call IsProcessed: %v", err)
+	}
+	err = be.CancelLease()
+	if err != nil {
+		t.Errorf("failed to cancel lease: %v", err)
+	}
+}
