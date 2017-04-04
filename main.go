@@ -107,14 +107,13 @@ func run() int {
 		return -1
 	}
 
-	var shouldInclude func(git.Commit) bool
 	if *hash != "" {
-		shouldInclude = func(g git.Commit) bool {
-			return g.Hash == *hash
-		}
+		commits = filter(commits, func(c git.Commit) bool {
+			return c.Hash == *hash
+		})
 	}
 
-	err = processCommmits(logger, commits, be, tp, *repoURLFlag, shouldInclude)
+	err = processCommmits(logger, commits, be, tp, *repoURLFlag)
 	if err != nil {
 		return -1
 	}
@@ -138,16 +137,20 @@ type commenter interface {
 	Comment(entityID int, message string) error
 }
 
-func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commenter commenter, commitURL string, shouldInclude func(git.Commit) bool) error {
+func filter(commits []git.Commit, match func(git.Commit) bool) []git.Commit {
+	op := []git.Commit{}
+	for _, c := range commits {
+		if match(c) {
+			op = append(op, c)
+		}
+	}
+	return op
+}
+
+func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commenter commenter, commitURL string) error {
 	commentsCreated := 0
 	for _, entry := range commits {
 		entryLogger := logger.WithField("hash", entry.Hash)
-		if !shouldInclude(entry) {
-			if !*quiet {
-				entryLogger.Info("skipping hash - doesn't match filter")
-			}
-			continue
-		}
 		processed, err := be.IsProcessed(entry.Hash)
 		if err != nil {
 			return err
