@@ -150,8 +150,10 @@ func processCommmits(logger *log.Entry, commits []git.Commit, be Backend, commen
 		if err != nil {
 			return err
 		}
-		if processed && !*quiet {
-			entryLogger.Info("skipping already processed hash")
+		if processed {
+			if !*quiet {
+				entryLogger.Info("skipping already processed hash")
+			}
 			continue
 		}
 		entryLogger = entryLogger.WithField("git_timestamp", entry.Timestamp)
