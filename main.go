@@ -10,7 +10,7 @@ import (
 
 	"errors"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/a-h/tpgit/backend"
 	"github.com/a-h/tpgit/git"
 	"github.com/a-h/tpgit/targetprocess"
